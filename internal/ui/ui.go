@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const mainWidth = 60 // Width of the main content area
+const mainWidth = 65 // Width of the main content area, adjust as needed
 
 // keyMap defines the key bindings for the application
 type keyMap struct {
@@ -150,14 +150,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View renders the current state of the model as a string
 func (m Model) View() string {
-	// If no matches are available, show this message
+	// If no matches are available show not found message
 	if len(m.app.Matches) == 0 {
-		noMatchesMssg := "\nNo live matches at the moment :(\n\n" +
-			"Use the --match-id flag with a valid match ID\n" +
-			"from Cricbuzz to view a specific match.\n\n"
-
-		noMatchesMssg += helpStyle.Render("Press 'q' to quit\n")
-		return m.styleNoMatchesMssg(noMatchesMssg)
+		return m.renderNotFoundMessage()
 	}
 
 	var content strings.Builder
@@ -198,13 +193,27 @@ func (m Model) centerHorizontally(content string) string {
 		Render(content)
 }
 
-// styleNoMatchesMssg styles the "no matches" message
-func (m Model) styleNoMatchesMssg(content string) string {
+// renderNotFoundMessage renders a message when no live matches are found
+func (m Model) renderNotFoundMessage() string {
+	notFoundMessage := "\nNo live matches found at the moment :(\n\n" +
+		"This could be due to:\n\n" +
+		"• Temporary issues with the Cricbuzz API\n" +
+		"• No matches currently being played\n" +
+		"• Your internet connection\n\n" +
+		"Please try again in a few moments.\n\n" +
+		"Use the --match-id flag with a valid match ID from Cricbuzz to view a specific match.\n\n"
+
+	notFoundMessage += helpStyle.Render("Press 'q' to quit\n")
+	return m.styleNotFoundMessage(notFoundMessage)
+}
+
+// styleNotFoundMessage styles the "no matches" message
+func (m Model) styleNotFoundMessage(content string) string {
 	return tabStyle.
 		Width(mainWidth).
-		MarginTop((m.height - 10) / 2).
-		MarginLeft((m.width - mainWidth) / 2).
-		Align(lipgloss.Center).
+		MarginTop((m.height-20)/2).
+		MarginLeft((m.width-mainWidth)/2).
+		Padding(0, 4).
 		Render(content)
 }
 
@@ -213,15 +222,18 @@ func (m Model) renderMatchInfo(match models.MatchInfo) string {
 	var content strings.Builder
 
 	// Match header
-	header := fmt.Sprintf("%s vs %s - %s",
-		match.CricbuzzInfo.MatchHeader.Team1.ShortName,
-		match.CricbuzzInfo.MatchHeader.Team2.ShortName,
-		match.CricbuzzInfo.MatchHeader.MatchFormat)
-	headerStyled := activeTabStyle.Align(lipgloss.Center)
-	content.WriteString(headerStyled.Render(header))
-	content.WriteString("\n\n")
+	if len(m.app.Matches) <= 1 {
+		header := fmt.Sprintf("%s vs %s - %s",
+			match.CricbuzzInfo.MatchHeader.Team1.ShortName,
+			match.CricbuzzInfo.MatchHeader.Team2.ShortName,
+			match.CricbuzzInfo.MatchHeader.MatchFormat)
+		headerStyled := activeTabStyle.Align(lipgloss.Center)
+		content.WriteString(headerStyled.Render(header))
+		content.WriteString("\n")
+	}
 
 	// Team scores
+	content.WriteString("\n")
 	content.WriteString(m.renderTeamScores(match.CricbuzzInfo.Miniscore.MatchScoreDetails))
 	content.WriteString("\n\n")
 
@@ -480,9 +492,13 @@ func (m Model) renderBattingCard(batsmen []models.BatsmanInfo) string {
 
 	var content strings.Builder
 
-	// Header row
-	headerRow := fmt.Sprintf("%-25s %5s %5s %3s %3s %8s",
-		"Batsman", "R", "B", "4s", "6s", "S/R")
+	otherColumnsWidth := 24 // 5 + 5 + 3 + 3 + 8 for R, B, 4s, 6s, S/R
+	nameWidth := mainWidth - otherColumnsWidth - 7
+
+	// Dynamic header formatting
+	headerFormat := fmt.Sprintf("%%-%ds %%5s %%4s %%4s %%3s %%8s", nameWidth)
+	headerRow := fmt.Sprintf(headerFormat, "Batsman", "R", "B", "4s", "6s", "S/R")
+
 	content.WriteString(tableHeaderStyle.Render(headerRow))
 	content.WriteString("\n")
 
@@ -490,6 +506,9 @@ func (m Model) renderBattingCard(batsmen []models.BatsmanInfo) string {
 	separator := strings.Repeat("─", mainWidth)
 	content.WriteString(helpStyle.Render(separator))
 	content.WriteString("\n")
+
+	// Data rows with dynamic formatting
+	rowFormat := fmt.Sprintf("%%-%ds %%5s %%4s %%4s %%3s %%8s", nameWidth)
 
 	// Data rows
 	for _, bat := range batsmen {
@@ -500,8 +519,8 @@ func (m Model) renderBattingCard(batsmen []models.BatsmanInfo) string {
 			!strings.Contains(strings.ToLower(bat.Status), "not out")
 
 		// Player stats row
-		nameRow := fmt.Sprintf("%-25s %5s %5s %3s %3s %8s",
-			truncateString(bat.Name, 30),
+		nameRow := fmt.Sprintf(rowFormat,
+			truncateString(bat.Name, nameWidth),
 			bat.Runs,
 			bat.Balls,
 			bat.Fours,
@@ -514,11 +533,20 @@ func (m Model) renderBattingCard(batsmen []models.BatsmanInfo) string {
 		// Dismissal info below name
 		if isOut {
 			dismissalInfo := strings.TrimSpace(bat.Status)
-			dismissalRow := fmt.Sprintf("  %s", dismissalInfo)
+			dismissalRow := dismissalInfo
 			dismissalStyle := lipgloss.NewStyle().
 				Width(mainWidth).
 				Align(lipgloss.Left).
-				PaddingLeft(2).
+				PaddingLeft(1).
+				Foreground(lipgloss.Color("8"))
+			content.WriteString(dismissalStyle.Render(dismissalRow))
+			content.WriteString("\n")
+		} else {
+			dismissalRow := "not out"
+			dismissalStyle := lipgloss.NewStyle().
+				Width(mainWidth).
+				Align(lipgloss.Left).
+				PaddingLeft(1).
 				Foreground(lipgloss.Color("8"))
 			content.WriteString(dismissalStyle.Render(dismissalRow))
 			content.WriteString("\n")
@@ -536,9 +564,14 @@ func (m Model) renderBowlingCard(bowlers []models.BowlerInfo) string {
 
 	var content strings.Builder
 
-	// Header row
-	headerRow := fmt.Sprintf("%-25s %5s %4s %4s %3s %8s",
-		"Bowler", "O", "M", "R", "W", "Econ")
+	// Calculate dynamic name column width
+	otherColumnsWidth := 24 // 5 + 4 + 4 + 3 + 8 for O, M, R, W, Econ
+	nameWidth := mainWidth - otherColumnsWidth - 7
+
+	// Dynamic header formatting
+	headerFormat := fmt.Sprintf("%%-%ds %%5s %%4s %%4s %%3s %%8s", nameWidth)
+	headerRow := fmt.Sprintf(headerFormat, "Bowler", "O", "M", "R", "W", "Econ")
+
 	content.WriteString(tableHeaderStyle.Render(headerRow))
 	content.WriteString("\n")
 
@@ -547,11 +580,14 @@ func (m Model) renderBowlingCard(bowlers []models.BowlerInfo) string {
 	content.WriteString(helpStyle.Render(separator))
 	content.WriteString("\n")
 
+	// Data rows with dynamic formatting
+	rowFormat := fmt.Sprintf("%%-%ds %%5s %%4s %%4s %%3s %%8s", nameWidth)
+
 	// Data rows
 	for _, bowl := range bowlers {
 		// Bowler stats row
-		nameRow := fmt.Sprintf("%-25s %5s %4s %4s %3s %8s",
-			truncateString(bowl.Name, 305),
+		nameRow := fmt.Sprintf(rowFormat,
+			truncateString(bowl.Name, nameWidth),
 			bowl.Overs,
 			bowl.Maidens,
 			bowl.Runs,
