@@ -14,12 +14,12 @@ Beautiful, minimal TUI cricket scorecard viewer
     <th>2nd Innings</th>
   </tr>
   <tr>
-    <td><img src="assets/1bat.png" width="300"></td>
-    <td><img src="assets/2bat.png" width="300"></td>
+    <td><img src="assets/bat1.png" width="300"></td>
+    <td><img src="assets/bat2.png" width="300"></td>
   </tr>
   <tr>
-    <td><img src="assets/1bowl.png" width="300"></td>
-    <td><img src="assets/2bowl.png" width="300"></td>
+    <td><img src="assets/bowl1.png" width="300"></td>
+    <td><img src="assets/bowl2.png" width="300"></td>
   </tr>
 </table>
 
