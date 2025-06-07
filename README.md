@@ -4,6 +4,8 @@
 Beautiful, minimal TUI cricket scorecard viewer
 </p>
 
+<br>
+
 <div align="center" style="width: 80%; margin: auto;">
 
 <table>
@@ -12,17 +14,18 @@ Beautiful, minimal TUI cricket scorecard viewer
     <th>2nd Innings</th>
   </tr>
   <tr>
-    <td><img src="assets/bat1.png" width="300"></td>
-    <td><img src="assets/bat2.png" width="300"></td>
+    <td><img src="assets/1bat.png" width="300"></td>
+    <td><img src="assets/2bat.png" width="300"></td>
   </tr>
   <tr>
-    <td><img src="assets/bowl1.png" width="300"></td>
-    <td><img src="assets/bowl2.png" width="300"></td>
+    <td><img src="assets/1bowl.png" width="300"></td>
+    <td><img src="assets/2bowl.png" width="300"></td>
   </tr>
 </table>
 
 </div>
 
+---
 
 ## Features
 
@@ -67,7 +70,7 @@ crictty --tick-rate 30000
 crictty --help
 ```
 
-> ![TIP]
+> [!TIP]
 > To use the `--match-id` flag, open the specific match page on [Cricbuzz](https://www.cricbuzz.com), and extract the match ID from the URL <br>
 `https://www.cricbuzz.com/live-cricket-scorecard/<id>/...`
 
