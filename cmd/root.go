@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"crictty/internal/app"
-	"crictty/internal/ui"
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/ashish0kumar/crictty/internal/app"
+	"github.com/ashish0kumar/crictty/internal/ui"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"

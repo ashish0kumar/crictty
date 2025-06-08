@@ -1,7 +1,7 @@
 package main
 
 import (
-	"crictty/cmd"
+	"github.com/ashish0kumar/crictty/cmd"
 	"os"
 )
 

@@ -1,10 +1,11 @@
 package app
 
 import (
-	"crictty/internal/cricbuzz"
-	"crictty/internal/models"
 	"fmt"
 	"time"
+
+	"github.com/ashish0kumar/crictty/internal/cricbuzz"
+	"github.com/ashish0kumar/crictty/internal/models"
 )
 
 // App represents the main application structure

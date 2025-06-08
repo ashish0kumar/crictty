@@ -1,7 +1,6 @@
 package cricbuzz
 
 import (
-	"crictty/internal/models"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ashish0kumar/crictty/internal/models"
 
 	"github.com/PuerkitoBio/goquery"
 )

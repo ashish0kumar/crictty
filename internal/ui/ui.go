@@ -1,11 +1,12 @@
 package ui
 
 import (
-	"crictty/internal/app"
-	"crictty/internal/models"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/ashish0kumar/crictty/internal/app"
+	"github.com/ashish0kumar/crictty/internal/models"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
