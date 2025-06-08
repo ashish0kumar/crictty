@@ -176,9 +176,9 @@ func (m Model) View() string {
 	if m.selectedMatch < len(m.app.Matches) {
 		match := m.app.Matches[m.selectedMatch]
 		content.WriteString(m.renderMatchInfo(match))
-  	var match_id = fmt.Sprintf("Match id : %d", match.CricbuzzMatchID)
-  	content.WriteString(helpStyle.Render(match_id))
-  	content.WriteString("\n")
+		var match_id = fmt.Sprintf("Match id : %d", match.CricbuzzMatchID)
+		content.WriteString(helpStyle.Render(match_id))
+		content.WriteString("\n")
 	}
 
 	// Help
