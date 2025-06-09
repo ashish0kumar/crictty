@@ -54,6 +54,13 @@ sudo mv crictty /usr/local/bin/
 crictty -h
 ```
 
+### Using Docker
+
+```bash
+docker build -t crictty .
+docker run --rm -it crictty
+```
+
 ## Usage
 
 ```bash
