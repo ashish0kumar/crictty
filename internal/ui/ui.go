@@ -54,6 +54,8 @@ var keys = keyMap{
 }
 
 type tickMsg time.Time
+type loadingMsg bool
+type updateCompleteMsg bool
 
 // Model represents the state of the application
 type Model struct {
@@ -64,16 +66,23 @@ type Model struct {
 	tickRate       int
 	width          int
 	height         int
+	loading        bool
+	lastUpdate     time.Time
+	nextUpdate     time.Time
 }
 
 // NewModel creates a new Model instance with the given app and tick rate
 func NewModel(app *app.App, tickRate int) Model {
+	now := time.Now()
 	return Model{
 		app:            app,
 		selectedMatch:  0,
 		currentInnings: 0,
 		showBowling:    false,
 		tickRate:       tickRate,
+		loading:        false,
+		lastUpdate:     now,
+		nextUpdate:     now.Add(time.Duration(tickRate) * time.Millisecond),
 	}
 }
 
@@ -136,12 +145,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Handle tick messages to update matches
 	case tickMsg:
+		m.loading = true
+		m.nextUpdate = time.Now().Add(time.Duration(m.tickRate) * time.Millisecond)
 		cmds = append(cmds, tea.Cmd(func() tea.Msg {
 			if err := m.app.UpdateMatches(); err != nil {
 				return err
 			}
-			return nil
+			return updateCompleteMsg(true)
 		}))
+
+	case updateCompleteMsg:
+		m.loading = false
+		m.lastUpdate = time.Now()
+		m.nextUpdate = time.Now().Add(time.Duration(m.tickRate) * time.Millisecond)
 	}
 
 	// Always schedule the next tick unless quitting
@@ -158,7 +174,7 @@ func (m Model) View() string {
 
 	var content strings.Builder
 
-	// Match tabs
+	// Match tabs with live indicators
 	if len(m.app.Matches) > 1 {
 		var tabs []string
 		for i, name := range m.app.GetMatchNames() {
@@ -166,7 +182,20 @@ func (m Model) View() string {
 			if i == m.selectedMatch {
 				style = activeTabStyle
 			}
-			tabs = append(tabs, style.Render(name))
+
+			// Add live indicator for active matches
+			tabText := name
+			if i < len(m.app.Matches) {
+				match := m.app.Matches[i]
+				if match.CricbuzzInfo.Miniscore.MatchScoreDetails.State == "In Progress" {
+					tabText = "● " + name
+					if i == m.selectedMatch {
+						style = style.Foreground(lipgloss.Color("2"))
+					}
+				}
+			}
+
+			tabs = append(tabs, style.Render(tabText))
 		}
 		content.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, tabs...))
 		content.WriteString("\n")
@@ -180,6 +209,10 @@ func (m Model) View() string {
 		content.WriteString(helpStyle.Render(match_id))
 		content.WriteString("\n")
 	}
+
+	// Status bar with loading and connection info
+	content.WriteString("\n")
+	content.WriteString(m.renderStatusBar())
 
 	// Help
 	content.WriteString("\n")
@@ -225,12 +258,13 @@ func (m Model) styleNotFoundMessage(content string) string {
 func (m Model) renderMatchInfo(match models.MatchInfo) string {
 	var content strings.Builder
 
-	// Match header
+	// Match header with colored team names
 	if len(m.app.Matches) <= 1 {
-		header := fmt.Sprintf("%s vs %s - %s",
-			match.CricbuzzInfo.MatchHeader.Team1.ShortName,
-			match.CricbuzzInfo.MatchHeader.Team2.ShortName,
-			match.CricbuzzInfo.MatchHeader.MatchFormat)
+		team1 := team1Style.Render(match.CricbuzzInfo.MatchHeader.Team1.ShortName)
+		team2 := team2Style.Render(match.CricbuzzInfo.MatchHeader.Team2.ShortName)
+		format := match.CricbuzzInfo.MatchHeader.MatchFormat
+
+		header := fmt.Sprintf("%s vs %s - %s", team1, team2, format)
 		headerStyled := activeTabStyle.Align(lipgloss.Center)
 		content.WriteString(headerStyled.Render(header))
 		content.WriteString("\n")
@@ -321,22 +355,37 @@ func (m Model) renderTeamScores(scoreDetails models.MatchScoreDetails) string {
 	return content.String()
 }
 
-// formatInningsScore formats the innings score for display
+// formatInningsScore formats the innings score for display with color coding
 func (m Model) formatInningsScore(innings models.InningsScore) string {
+	// Determine team color (alternating colors for different teams)
+	teamStyle := team1Style
+	if innings.BatTeamName != "" {
+		// Simple hashing to get consistent colors per team
+		hash := 0
+		for _, c := range innings.BatTeamName {
+			hash += int(c)
+		}
+		if hash%2 == 1 {
+			teamStyle = team2Style
+		}
+	}
+
+	teamName := teamStyle.Render(innings.BatTeamName)
+
 	if innings.IsDeclared {
 		return fmt.Sprintf("%s %d/%d D (%.1f)",
-			innings.BatTeamName,
+			teamName,
 			innings.Score,
 			innings.Wickets,
 			innings.Overs)
 	} else if innings.Wickets == 10 {
 		return fmt.Sprintf("%s %d (%.1f)",
-			innings.BatTeamName,
+			teamName,
 			innings.Score,
 			innings.Overs)
 	} else {
 		return fmt.Sprintf("%s %d/%d (%.1f)",
-			innings.BatTeamName,
+			teamName,
 			innings.Score,
 			innings.Wickets,
 			innings.Overs)
@@ -347,34 +396,50 @@ func (m Model) formatInningsScore(innings models.InningsScore) string {
 func (m Model) renderCurrentInnings(miniscore models.CricbuzzMiniscore) string {
 	var content strings.Builder
 
-	// Show live if there is no status and the match is in progress
+	// Show live status with color coding
 	if miniscore.Status == "" && miniscore.MatchScoreDetails.State == "In Progress" {
-		content.WriteString(statusStyle.Render("1st Innings"))
+		liveStatus := liveMatchStyle.Render("● LIVE")
+		content.WriteString(lipgloss.NewStyle().Width(mainWidth).Align(lipgloss.Center).Render(liveStatus))
 		content.WriteString("\n\n\n")
 	}
 
-	// Match status
+	// Match status with appropriate colors
 	if miniscore.Status != "" {
-		statusStyled := statusStyle.Width(mainWidth).Align(lipgloss.Center)
-		content.WriteString(statusStyled.Render(miniscore.Status))
+		var statusStyled lipgloss.Style
+		statusText := miniscore.Status
+
+		// Color code based on match state
+		if strings.Contains(strings.ToLower(statusText), "live") ||
+			strings.Contains(strings.ToLower(statusText), "progress") {
+			statusStyled = liveMatchStyle.Width(mainWidth).Align(lipgloss.Center)
+		} else if strings.Contains(strings.ToLower(statusText), "complete") ||
+			strings.Contains(strings.ToLower(statusText), "finished") {
+			statusStyled = completedMatchStyle.Width(mainWidth).Align(lipgloss.Center)
+		} else {
+			statusStyled = statusStyle.Width(mainWidth).Align(lipgloss.Center)
+		}
+
+		content.WriteString(statusStyled.Render(statusText))
 		content.WriteString("\n\n\n")
 	}
 
 	var leftSide, rightSide strings.Builder
 
-	// Left side - Current batsmen
-	striker := fmt.Sprintf("%s %d(%d)*",
-		miniscore.BatsmanStriker.BatName,
+	// Left side - Current batsmen with strike rotation highlighting
+	strikerName := boundaryStyle.Render(miniscore.BatsmanStriker.BatName)
+	striker := fmt.Sprintf("%s %d(%d) *",
+		strikerName,
 		miniscore.BatsmanStriker.BatRuns,
 		miniscore.BatsmanStriker.BatBalls)
-	leftSide.WriteString(scoreStyle.Render(striker))
+	leftSide.WriteString(striker)
 	leftSide.WriteString("\n")
 
+	nonStrikerName := scoreStyle.Render(miniscore.BatsmanNonStriker.BatName)
 	nonStriker := fmt.Sprintf("%s %d(%d)",
-		miniscore.BatsmanNonStriker.BatName,
+		nonStrikerName,
 		miniscore.BatsmanNonStriker.BatRuns,
 		miniscore.BatsmanNonStriker.BatBalls)
-	leftSide.WriteString(scoreStyle.Render(nonStriker))
+	leftSide.WriteString(nonStriker)
 
 	// Right side - Current bowler
 	bowlerName := miniscore.BowlerStriker.BowlName
@@ -611,4 +676,47 @@ func truncateString(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen-3] + "..."
+}
+
+// renderStatusBar renders the status bar with loading indicator and connection info
+func (m Model) renderStatusBar() string {
+	var statusParts []string
+
+	// Loading indicator
+	if m.loading {
+		statusParts = append(statusParts, loadingStyle.Render("● Updating..."))
+	} else {
+		statusParts = append(statusParts, connectionStyle.Render("● Connected"))
+	}
+
+	// Last update time
+	if !m.lastUpdate.IsZero() {
+		timeSince := time.Since(m.lastUpdate)
+		if timeSince < time.Minute {
+			statusParts = append(statusParts, progressStyle.Render(fmt.Sprintf("Updated %ds ago", int(timeSince.Seconds()))))
+		} else {
+			statusParts = append(statusParts, progressStyle.Render(fmt.Sprintf("Updated %dm ago", int(timeSince.Minutes()))))
+		}
+	}
+
+	// Next update countdown
+	if !m.nextUpdate.IsZero() && !m.loading {
+		timeToNext := time.Until(m.nextUpdate)
+		if timeToNext > 0 {
+			statusParts = append(statusParts, progressStyle.Render(fmt.Sprintf("Next: %ds", int(timeToNext.Seconds()))))
+		}
+	}
+
+	// Join status parts with spacing
+	statusBar := strings.Join(statusParts, "  •  ")
+	return lipgloss.NewStyle().
+		Width(mainWidth).
+		Align(lipgloss.Center).
+		Render(statusBar)
+}
+
+// getSpinner returns a spinning character based on current time
+func getSpinner() string {
+	spinners := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	return spinners[int(time.Now().UnixNano()/100000000)%len(spinners)]
 }
