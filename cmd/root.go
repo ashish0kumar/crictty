@@ -25,6 +25,11 @@ var rootCmd = &cobra.Command{
 	RunE:  runCrictty,
 }
 
+// SetVersion sets the version of the application
+func SetVersion(v string) {
+	rootCmd.Version = v
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately
 func Execute() error {
 	return rootCmd.Execute()
