@@ -38,7 +38,20 @@ Beautiful, minimal TUI cricket scorecard viewer
 
 ## Installation
 
-### Using `go install`
+### Nix
+
+```bash
+nix profile install nixpkgs#crictty
+```
+
+### Docker
+
+```bash
+docker build -t crictty .
+docker run --rm -it crictty
+```
+
+### `go install`
 
 ```bash
 go install github.com/ashish0kumar/crictty@latest
@@ -52,13 +65,6 @@ cd crictty
 go build
 sudo mv crictty /usr/local/bin/
 crictty -h
-```
-
-### Using Docker
-
-```bash
-docker build -t crictty .
-docker run --rm -it crictty
 ```
 
 ## Usage
