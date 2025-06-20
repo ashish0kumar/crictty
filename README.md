@@ -1,10 +1,16 @@
 <h1 align="center"> crictty </h1>
 
+<div align="center">
+<p>
+<a href="https://github.com/ashish0kumar/crictty/stargazers"><img src="https://img.shields.io/github/stars/ashish0kumar/crictty?style=for-the-badge&logo=starship&color=CBA6F7&logoColor=cdd6f4&labelColor=302D41" alt="stars"><a>&nbsp;&nbsp;
+<a href="https://github.com/ashish0kumar/crictty/releases"><img src="https://img.shields.io/github/v/release/ashish0kumar/crictty?style=for-the-badge&logo=github&color=CBA6F7&logoColor=cdd6f4&labelColor=302D41" alt="Releases"></a>&nbsp;&nbsp;
+<a href="https://github.com/ashish0kumar/crictty/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ashish0kumar/crictty?style=for-the-badge&logo=googledocs&color=CBA6F7&logoColor=cdd6f4&labelColor=302D41" alt="LICENSE"></a>&nbsp;&nbsp;
+</p>
+</div>
+
 <p align="center">
 Beautiful, minimal TUI cricket scorecard viewer
 </p>
-
-<br>
 
 <div align="center" style="width: 80%; margin: auto;">
 
