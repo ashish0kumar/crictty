@@ -110,12 +110,6 @@ crictty --help
 
 Contributions are always welcome! Feel free to submit a Pull Request.
 
-## Contributors
-
-<a href="https://github.com/ashish0kumar/crictty/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=ashish0kumar/crictty" />
-</a>
-
 <br><br>
 
 <p align="center">
